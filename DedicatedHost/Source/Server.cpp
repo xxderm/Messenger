@@ -2,108 +2,121 @@
 
 namespace DedicatedHost {
 
-    bool Server::Initialize(const char* port) {
-        int iResult{};
-        iResult = WSAStartup(MAKEWORD(2, 2), &mWSAData);
-
-        if (iResult != 0) {
-            std::cout << "WSAStartup failed: " << iResult << std::endl;
-            return false;
+    bool Server::Initialize(uint32_t port) {
+        SDL_Init(SDL_INIT_EVERYTHING);
+        if (SDLNet_Init() < 0) {
+            std::cout << "Couldn't init sdlnet\n";
+            SDL_Quit();
         }
-
-        struct addrinfo *result = nullptr;
-        struct addrinfo *ptr = nullptr;
-        struct addrinfo hints;
-        ZeroMemory(&hints, sizeof(hints));
-        hints.ai_family = AF_INET; // IpV4
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_protocol = IPPROTO_TCP; // TCP
-        hints.ai_flags = AI_PASSIVE;
-
-        iResult = getaddrinfo(nullptr, port, &hints, &result);
-        if (iResult != 0) {
-            std::cout << "Getaddrinfo failed: " << iResult << std::endl;
-            WSACleanup();
-            return false;
+        if (SDLNet_ResolveHost(&mIp, NULL, port) == -1) {
+            std::cout << "Resolve Error\n";
+            SDL_Quit();
         }
-        
-        mServerSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-        if (mServerSocket == INVALID_SOCKET) {
-            std::cout << "Failed to create server socket: " << WSAGetLastError() << std::endl;
-            freeaddrinfo(result);
-            WSACleanup();
-            return false;
+        mServerSocket = SDLNet_TCP_Open(&mIp);
+        if (mServerSocket == 0) {
+            std::cout << "Socket open error\n";
+            SDL_Quit();
         }
-
-        iResult = bind(mServerSocket, result->ai_addr, (int)result->ai_addrlen);
-        if (iResult == SOCKET_ERROR) {
-            std::cout << "Failed to create server socket: " << WSAGetLastError() << std::endl;
-            freeaddrinfo(result);
-            closesocket(mServerSocket);
-            WSACleanup();
-            return false;
+        mSockSet = SDLNet_AllocSocketSet(MaxGuests);
+        if (mSockSet == 0) {
+            std::cout << "SockSet error\n";
+            SDL_Quit();
         }
-
-        if (listen(mServerSocket, SOMAXCONN) == SOCKET_ERROR) {
-            std::cout << "Listen failed: " << WSAGetLastError() << std::endl;
-            closesocket(mServerSocket);
-            WSACleanup();
-            return false;
-        }
-
-        freeaddrinfo(result);
+        SDLNet_TCP_AddSocket(mSockSet, mServerSocket);
         return true;
     }
 
     void Server::Launch() noexcept {
         mRunning = true;
-        fd_set active, read;
-        FD_ZERO (&active);
-        FD_SET (mServerSocket, &active);
+        int index = 0;
         while (mRunning) {
-            read = active;
-            auto count = select(0, &read, 0, 0, 0);
-            for (int i = 0; i < count; ++i) {
-                auto socket = read.fd_array[i];
-                if (FD_ISSET(socket, &read)) {
-                    if (socket == mServerSocket) {
-                        // New guest
-                        SOCKET guest;
-                        guest = accept(mServerSocket, 0, 0);
-                        if (guest < 0) {
-                            std::cout << "Failed to accept connection\n";
-                        }
-                        FD_SET(guest, &active);
+            auto countRdy = SDLNet_CheckSockets(mSockSet, 10);
+            if (countRdy == -1) std::cout << SDLNet_GetError();
+            if (countRdy > 0) {
+                if (SDLNet_SocketReady(mServerSocket)) {
+                    int getSock = AcceptSock(index);
+                    if (!getSock) {
+                        --countRdy;
+                        continue;
                     }
-                    else {
-                        // New packet
-                        char buffer[255];
-                        auto n = recv(socket, buffer, 255, 0);
-
-                        if (n > 0) {
-
-                        }
-                        else if (n == 0) {
-                            std::cout << "Connection closed\n";
-                            closesocket(socket);
-                            FD_CLR(socket, &active);
-                        }
-                        else
-                            std::cout << "Receive failed\n";
-
+                    int checkCount;
+                    for (checkCount = 0; checkCount < MaxGuests; ++checkCount) {
+                        if (mGuests[(index + checkCount) % MaxGuests] == 0)
+                            break;
                     }
+                    index = (index + checkCount) % MaxGuests;
+                    --countRdy;
+                }
+                for (int i = 0; (i < MaxGuests) && countRdy ; ++i) {
+                    if (mGuests[i] == 0) continue;
+                    if (!SDLNet_SocketReady(mGuests[i])) continue;
+                    auto data = Receive(i);
+                    if (data == 0) {
+                        --countRdy;
+                        continue;
+                    }
+                    std::cout << data << std::endl;
+                    delete data;
+                    --countRdy;
                 }
             }
         }
-        closesocket(mServerSocket);
     }
 
     Server::~Server() {
-        WSACleanup();
+        if (SDLNet_TCP_DelSocket(mSockSet, mServerSocket) == -1) {
+            std::cout << "Failed to delete server socket\n";
+        }
+        SDLNet_FreeSocketSet(mSockSet);
+        SDLNet_TCP_Close(mServerSocket);
     }
 
     void Server::Stop() noexcept {
         mRunning = false;
+    }
+
+    int Server::AcceptSock(int index) {
+        if (mGuests[index]) {
+            std::cout << "Socket override\n";
+            CloseSock(index);
+        }
+        mGuests[index] = SDLNet_TCP_Accept(mServerSocket);
+        if (mGuests[index] == 0)
+            return 0;
+        if (SDLNet_TCP_AddSocket(mSockSet, mGuests[index]) == -1) {
+            std::cout << "Error add socket\n";
+            SDL_Quit();
+        }
+        std::cout << "New client: " << mGuests[index] << std::endl;
+        return 1;
+    }
+
+    void Server::CloseSock(int index) {
+        if (mGuests[index] == 0) {
+            std::cout << "Error add socket\n";
+            return;
+        }
+        if (SDLNet_TCP_DelSocket(mSockSet, mGuests[index]) == -1) {
+            std::cout << "Error delete socket\n";
+            SDL_Quit();
+        }
+        SDLNet_TCP_Close(mGuests[index]);
+        mGuests[index] = 0;
+    }
+
+    char* Server::Receive(int index) {
+        char* buffer[DEFAULT_BUFFER_LEN];
+        int countRec = SDLNet_TCP_Recv(mGuests[index], buffer, DEFAULT_BUFFER_LEN);
+        if (countRec <= 0) {
+            std::cout << "Client disconnect: " << mGuests[index] << std::endl;
+            CloseSock(index);
+            return 0;
+        }
+        else {
+            char* data = new char[DEFAULT_BUFFER_LEN];
+            memcpy(data, buffer, DEFAULT_BUFFER_LEN);
+            return data;
+        }
     }
 
 }

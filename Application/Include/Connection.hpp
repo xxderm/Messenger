@@ -3,21 +3,25 @@
 #include <sstream>
 #include <thread>
 #include "Packet.hpp"
-#include <SDL.h>
 #include <SDL_net.h>
+#include <SDL.h>
 
 namespace Application {
 
     class TcpCoonection final {
     public:
-        bool Initialize(uint32_t port) noexcept;
+        TcpCoonection();
 
-        bool Send(std::shared_ptr<Utils::IPacket> packet);
+        bool Initialize(uint32_t port);
+
+        bool Connect(uint32_t port);
+
+        bool Send();
 
         ~TcpCoonection();
     private:
         TCPsocket mSocket;
-        IPaddress mIp;
+        IPaddress mServerIp;
     };
 
 }

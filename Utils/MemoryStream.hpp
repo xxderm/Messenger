@@ -39,6 +39,7 @@ namespace Utils {
         InputMemory(const InputMemory& other) = delete;
 
         explicit InputMemory(char* data) : mData(data) {
+            // TODO: data nullptr
             memcpy(&mPacketSize, data, sizeof(uint32_t));
             mStride = sizeof(uint32_t);
         }
@@ -48,6 +49,7 @@ namespace Utils {
         }
 
         void Read(void* data, uint32_t typeSize) noexcept {
+            // TODO: data nullptr
             memcpy(data, mData + mStride, typeSize);
             mStride += typeSize;
         }

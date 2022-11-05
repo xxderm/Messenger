@@ -1,18 +1,18 @@
 #pragma once
-#include <WinSock2.h>
-#include <ws2tcpip.h>
 #include <iostream>
 #include <sstream>
 #include <thread>
 #include "Packet.hpp"
-
-#pragma comment(lib, "Ws2_32.lib")
+#include <SDL_net.h>
+#include <list>
 
 namespace DedicatedHost {
 
+    constexpr uint32_t MaxGuests = 64;
+
     class Server final {
     public:
-        bool Initialize(const char* port);
+        bool Initialize(uint32_t port);
 
         void Launch() noexcept;
 
@@ -20,10 +20,15 @@ namespace DedicatedHost {
 
         ~Server();
     private:
+        int AcceptSock(int index);
+        void CloseSock(int index);
+        char* Receive(int index);
     private:
         bool mRunning = false;
-        WSAData mWSAData;
-        SOCKET mServerSocket = INVALID_SOCKET;
+        TCPsocket mServerSocket;
+        SDLNet_SocketSet mSockSet;
+        TCPsocket mGuests[MaxGuests];
+        IPaddress mIp;
     };
 
 }

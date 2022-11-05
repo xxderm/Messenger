@@ -12,4 +12,4 @@ link_directories("../Vendor/sdl/vc/lib/x64/")
 
 add_executable(DedicatedHost ${sources})
 
-target_link_libraries(DedicatedHost SDL2main SDL2)
+target_link_libraries(DedicatedHost SDL2main SDL2 SDL2_net)
