@@ -8,3 +8,4 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(Application)
 add_subdirectory(DedicatedHost)
+add_subdirectory(Test)
