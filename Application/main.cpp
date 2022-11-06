@@ -4,10 +4,6 @@
 #include "BackgroundWorker.hpp"
 
 int main(int argc, char** argv) {
-    Utils::ConnectPacket connectPacket("UserNameTest");
-    Utils::InputMemory inputMemory(connectPacket.Data());
-    Utils::ConnectPacket pack(inputMemory);
-
     Application::TcpCoonection connection;
     connection.Init(5000);
     Utils::BackgroundWorker worker;
