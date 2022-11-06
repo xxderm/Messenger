@@ -10,18 +10,21 @@ namespace Application {
 
     class TcpCoonection final {
     public:
-        TcpCoonection();
+        TcpCoonection() = default;
 
-        bool Initialize(uint32_t port);
+        bool Init(uint32_t port);
 
-        bool Connect(uint32_t port);
+        bool Connect();
 
-        bool Send();
+        void Disconnect();
+
+        bool Send(void* data, uint32_t len);
 
         ~TcpCoonection();
     private:
         TCPsocket mSocket;
         IPaddress mServerIp;
+        uint32_t mServerPort;
     };
 
 }

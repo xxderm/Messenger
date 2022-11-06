@@ -11,7 +11,8 @@ namespace Utils {
         OutputMemory(const OutputMemory& other) = delete;
 
         explicit OutputMemory(uint32_t packetSize) {
-            mData = new char[packetSize];
+            mBufferSize = packetSize + sizeof(uint32_t);
+            mData = new char[mBufferSize];
             memcpy(mData, &packetSize, sizeof(packetSize));
             mStride = sizeof(packetSize);
         }
@@ -23,6 +24,8 @@ namespace Utils {
 
         char* GetData() const noexcept { return mData; }
 
+        uint32_t GetBufferSize() { return 1; }
+
         ~OutputMemory() {
             delete mData;
             mData = nullptr;
@@ -30,6 +33,7 @@ namespace Utils {
     private:
         char* mData = nullptr;
         uint32_t mStride = 0;
+        uint32_t mBufferSize{};
     };
 
     class InputMemory final {

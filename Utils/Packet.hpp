@@ -22,21 +22,34 @@ namespace Utils {
 
     class IPacket {
     public:
-        virtual void* Data() = 0;
+        virtual char* Data() = 0;
         virtual ~IPacket() {}
     };
 
     class ConnectPacket : public IPacket {
     public:
-        explicit ConnectPacket(const InputMemory& input) {
-
+        explicit ConnectPacket(const std::string& userName) {
+            mUserName = userName;
+            mNameLen = userName.size();
         }
 
-        void* Data() override {
+        explicit ConnectPacket(InputMemory& input) {
+            input.Read(&mNameLen, sizeof(mNameLen));
+            mUserName.resize(mNameLen);
+            input.Read(&mUserName[0], mNameLen);
+        }
 
+        char* Data() override {
+            uint32_t packetSize = sizeof(mNameLen) + mNameLen;
+            mOutput = std::make_shared<OutputMemory>(packetSize);
+            mOutput->Write(&mNameLen, sizeof(mNameLen));
+            mOutput->Write(&mUserName[0], mNameLen);
+            return mOutput->GetData();
         }
     private:
         std::string mUserName;
+        uint32_t mNameLen{};
+        std::shared_ptr<OutputMemory> mOutput;
     };
 
     class PacketManager final {

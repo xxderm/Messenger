@@ -1,12 +1,30 @@
 #include "Connection.hpp"
 #include "Packet.hpp"
 #include "Connection.hpp"
+#include "BackgroundWorker.hpp"
 
 int main(int argc, char** argv) {
+    Utils::ConnectPacket connectPacket("UserNameTest");
+    Utils::InputMemory inputMemory(connectPacket.Data());
+    Utils::ConnectPacket pack(inputMemory);
+
     Application::TcpCoonection connection;
-    connection.Initialize(5000);
+    connection.Init(5000);
+    Utils::BackgroundWorker worker;
+    worker.SetInterval(5000);
+    worker.OnTick([&](void){
+        char dataSend[DEFAULT_BUFFER_LEN] = "Hallo";
+        auto isConn = connection.Connect();
+        if (isConn) {
+            std::cout << "Stop timer\n";
+            worker.Stop();
+        }
+        connection.Send(dataSend, 6);
+        connection.Disconnect();
+    });
+    worker.Start();
     while (true) {
-        connection.Send();
+
     }
     system("pause");
     return 0;
