@@ -11,6 +11,7 @@ namespace Utils {
     enum Signal {
         CONNECT = 0,
         GUESTS,
+        CHANNELS,
     };
 
     class IPacket {
@@ -90,9 +91,72 @@ namespace Utils {
         std::shared_ptr<OutputMemory> mOutput;
     };
 
+    struct ChannelsPacketProperties final {
+        std::string Name;
+        bool Access = true;
+        uint32_t Places;
+    };
+
+    class ChannelsPacket : public IPacket {
+    public:
+        explicit ChannelsPacket(std::vector<std::shared_ptr<ChannelsPacketProperties>> channels) : mChannels(channels) {}
+
+        explicit ChannelsPacket(std::shared_ptr<InputMemory> input) {
+            input->Read(&mChannelsCount, sizeof(uint32_t));
+            for (int i = 0; i < mChannelsCount; ++i) {
+                std::string Name{};
+                bool Access{};
+                uint32_t Places{};
+                uint32_t nameSize = 0;
+                input->Read(&nameSize, sizeof(uint32_t));
+                Name.resize(nameSize);
+                input->Read(&Name[0], nameSize);
+                input->Read(&Access, sizeof(bool));
+                input->Read(&Places, sizeof(uint32_t));
+                auto channel = std::make_shared<ChannelsPacketProperties>();
+                channel->Name = Name;
+                channel->Access = Access;
+                channel->Places = Places;
+                mChannels.push_back(channel);
+            }
+        }
+
+        char* Data() override {
+            auto signal = Signal::CHANNELS;
+            mChannelsCount = mChannels.size();
+            uint32_t totalCharCount = 0;
+            for(auto& channel : mChannels)
+                totalCharCount += channel->Name.size();
+            uint32_t packetSize = sizeof(Signal) +
+                    sizeof(uint32_t) +
+                    (mChannelsCount * sizeof(uint32_t)) +
+                    (mChannelsCount * sizeof(bool)) +
+                    (mChannelsCount * sizeof(uint32_t)) +
+                    totalCharCount;
+            mOutput = std::make_shared<OutputMemory>(packetSize);
+            mOutput->Write(&signal, sizeof(Signal));
+            mOutput->Write(&mChannelsCount, sizeof(uint32_t));
+            for(auto& channel : mChannels) {
+                auto [name, access, places] = *channel.get();
+                auto nameSize = name.size();
+                mOutput->Write(&nameSize, sizeof(uint32_t));
+                mOutput->Write(&name[0], nameSize);
+                mOutput->Write(&access, sizeof(bool));
+                mOutput->Write(&places, sizeof(uint32_t));
+            }
+            return mOutput->GetData();
+        }
+
+        std::vector<std::shared_ptr<ChannelsPacketProperties>> GetChannels() { return mChannels; }
+    private:
+        uint32_t mChannelsCount{};
+        std::vector<std::shared_ptr<ChannelsPacketProperties>> mChannels;
+        std::shared_ptr<OutputMemory> mOutput;
+    };
+
     class SignalManager final {
     public:
-        static std::pair<Signal, std::shared_ptr<InputMemory>> GetPacket(char* data) {
+        static std::pair<Signal, std::shared_ptr<InputMemory>> GetSignal(char* data) {
             std::shared_ptr<InputMemory> input = std::make_shared<InputMemory>(data);
             Signal signal;
             input->Read(&signal, sizeof(Signal));
