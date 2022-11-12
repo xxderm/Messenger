@@ -25,12 +25,12 @@ TEST(PacketTest, GuestsPacket) {
 
 TEST(PacketTest, ChannelsPacket) {
     srand(time(0));
-    std::vector<std::shared_ptr<Utils::ChannelsPacketProperties>> channels;
+    std::vector<std::shared_ptr<Utils::ChannelPacketProperties>> channels;
     for (int i = 0; i < 50; ++i) {
         std::string name = "Channel#" + std::to_string(rand() % 500);
         bool Access = static_cast<bool>(rand() % 2);
         uint32_t Places = rand() % 64;
-        auto channel = std::make_shared<Utils::ChannelsPacketProperties>();
+        auto channel = std::make_shared<Utils::ChannelPacketProperties>();
         channel->Name = name;
         channel->Access = Access;
         channel->Places = Places;
@@ -46,4 +46,31 @@ TEST(PacketTest, ChannelsPacket) {
         ASSERT_EQ(channels[i]->Access, channelsFromPacket[i]->Access);
         ASSERT_EQ(channels[i]->Places, channelsFromPacket[i]->Places);
     }
+}
+
+TEST(PacketTest, NewChannelPacket) {
+    srand(time(0));
+    std::shared_ptr<Utils::ChannelPacketProperties> channel;
+    channel = std::make_shared<Utils::ChannelPacketProperties>();
+    channel->Name = "Channel#" + std::to_string(rand() % 500);
+    channel->Access = static_cast<bool>(rand() % 2);
+    channel->Places = rand() % 64;
+
+    Utils::NewChannelPacket newChannelPacket(channel);
+    auto sig = Utils::SignalManager::GetSignal(newChannelPacket.Data());
+    Utils::NewChannelPacket pack(sig.second);
+    auto channelFromPacket = pack.GetChannel();
+    ASSERT_EQ(channel->Name, channelFromPacket->Name);
+    ASSERT_EQ(channel->Access, channelFromPacket->Access);
+    ASSERT_EQ(channel->Places, channelFromPacket->Places);
+}
+
+TEST(PacketTest, CloseChannelPacket) {
+    auto closeChannelName = "Channel#24";
+    Utils::CloseChannelPacket closeChannelPacket(closeChannelName);
+    auto sig = Utils::SignalManager::GetSignal(closeChannelPacket.Data());
+
+    Utils::CloseChannelPacket pack(sig.second);
+    auto closeName = pack.GetChannelName();
+    ASSERT_EQ(closeChannelName, closeName);
 }
