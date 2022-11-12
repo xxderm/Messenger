@@ -74,3 +74,32 @@ TEST(PacketTest, CloseChannelPacket) {
     auto closeName = pack.GetChannelName();
     ASSERT_EQ(closeChannelName, closeName);
 }
+
+TEST(PacketTest, GuestUpdatePack) {
+    auto guestName = "Guest1";
+    uint32_t guestId = 1;
+    Utils::GuestUpdatePacket guestUpdatePacket(guestName, guestId);
+    auto sig = Utils::SignalManager::GetSignal(guestUpdatePacket.Data());
+
+    Utils::GuestUpdatePacket pack(sig.second);
+    auto packGuestName = pack.GetName();
+    auto packGuestId = pack.GetId();
+    ASSERT_EQ(guestName, packGuestName);
+    ASSERT_EQ(guestId, packGuestId);
+}
+
+TEST(PacketTest, PMPacket) {
+    auto message = "Hello";
+    uint32_t fromId = 1;
+    uint32_t toId = 2;
+    Utils::PersonalMessagePacket personalMessagePacket(fromId, toId, message);
+    auto sig = Utils::SignalManager::GetSignal(personalMessagePacket.Data());
+
+    Utils::PersonalMessagePacket pack(sig.second);
+    auto packMsg = pack.GetMessage();
+    auto packFromId = pack.GetFrom();
+    auto packToId = pack.GetTo();
+    ASSERT_EQ(message, packMsg);
+    ASSERT_EQ(fromId, packFromId);
+    ASSERT_EQ(toId, packToId);
+}

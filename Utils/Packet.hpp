@@ -14,6 +14,8 @@ namespace Utils {
         CHANNELS,
         NEW_CHANNEL,
         CLOSE_CHANNEL,
+        GUEST_INFO_UPDATE,
+        PERSONAL_MESSAGE,
     };
 
     class IPacket {
@@ -215,6 +217,77 @@ namespace Utils {
     private:
         std::shared_ptr<OutputMemory> mOutput;
         std::string mChannelName{};
+    };
+
+    class GuestUpdatePacket : public IPacket {
+    public:
+        explicit GuestUpdatePacket(std::string guestName, uint32_t guestId) : mGuestName(guestName), mGuestId(guestId) {}
+
+        explicit GuestUpdatePacket(std::shared_ptr<InputMemory> input) {
+            uint32_t nameSize = 0;
+            input->Read(&nameSize, sizeof(uint32_t));
+            mGuestName.resize(nameSize);
+            input->Read(&mGuestName[0], nameSize);
+            input->Read(&mGuestId, sizeof(uint32_t));
+        }
+
+        char* Data() override {
+            auto sig = Signal::GUEST_INFO_UPDATE;
+            uint32_t nameSize = mGuestName.size();
+            uint32_t packetSize = sizeof(Signal) + sizeof(uint32_t) + nameSize + sizeof(uint32_t);
+            mOutput = std::make_shared<OutputMemory>(packetSize);
+            mOutput->Write(&sig, sizeof(Signal));
+            mOutput->Write(&nameSize, sizeof(uint32_t));
+            mOutput->Write(&mGuestName[0], nameSize);
+            mOutput->Write(&mGuestId, sizeof(uint32_t));
+            return mOutput->GetData();
+        }
+
+        std::string GetName() { return mGuestName; }
+
+        uint32_t GetId() { return mGuestId; }
+    private:
+        std::shared_ptr<OutputMemory> mOutput;
+        std::string mGuestName{};
+        uint32_t mGuestId{};
+    };
+
+    class PersonalMessagePacket : public IPacket {
+    public:
+        explicit PersonalMessagePacket(uint32_t from, uint32_t to, std::string msg) : mFrom(from), mTo(to), mMessage(msg) {}
+
+        explicit PersonalMessagePacket(std::shared_ptr<InputMemory> input) {
+            uint32_t messageSize = 0;
+            input->Read(&messageSize, sizeof(uint32_t));
+            mMessage.resize(messageSize);
+            input->Read(&mMessage[0], messageSize);
+            input->Read(&mFrom, sizeof(uint32_t));
+            input->Read(&mTo, sizeof(uint32_t));
+        }
+
+        char* Data() override {
+            auto sig = Signal::PERSONAL_MESSAGE;
+            uint32_t messageSize = mMessage.size();
+            uint32_t packSize = sizeof(Signal) + sizeof(uint32_t) + messageSize + (sizeof(uint32_t) * 2);
+            mOutput = std::make_shared<OutputMemory>(packSize);
+            mOutput->Write(&sig, sizeof(Signal));
+            mOutput->Write(&messageSize, sizeof(uint32_t));
+            mOutput->Write(&mMessage[0], messageSize);
+            mOutput->Write(&mFrom, sizeof(uint32_t));
+            mOutput->Write(&mTo, sizeof(uint32_t));
+            return mOutput->GetData();
+        }
+
+        std::string GetMessage() { return mMessage; }
+
+        uint32_t GetFrom() { return mFrom; }
+
+        uint32_t GetTo() { return mTo; }
+    private:
+        std::shared_ptr<OutputMemory> mOutput;
+        uint32_t mFrom{};
+        uint32_t mTo{};
+        std::string mMessage{};
     };
 
     class SignalManager final {
