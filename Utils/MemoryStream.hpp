@@ -24,7 +24,7 @@ namespace Utils {
 
         char* GetData() const noexcept { return mData; }
 
-        uint32_t GetBufferSize() { return 1; }
+        uint32_t GetBufferSize() { return mBufferSize; }
 
         ~OutputMemory() {
             delete mData;

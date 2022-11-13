@@ -6,7 +6,7 @@
 #include <SDL_net.h>
 #include <SDL.h>
 
-namespace Application {
+namespace Application::Model {
 
     class TcpCoonection final {
     public:
@@ -18,7 +18,9 @@ namespace Application {
 
         void Disconnect();
 
-        bool Send(void* data, uint32_t len);
+        bool Send(char* data, uint32_t len);
+
+        bool Receive();
 
         ~TcpCoonection();
     private:

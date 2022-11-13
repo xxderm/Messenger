@@ -7,20 +7,22 @@ TEST(PacketTest, ConnectPacket) {
     Utils::ConnectPacket pack(sig.second);
     ASSERT_EQ("UserNameTest",pack.GetName());
     ASSERT_EQ(connectPacket.GetName(), pack.GetName());
+    ASSERT_EQ(pack.GetId(), connectPacket.GetId());
 }
 
 TEST(PacketTest, GuestsPacket) {
-    std::vector<std::string> guests = {
-            "Guest1",
-            "Guest2",
-            "Guest3",
-            "GuestTest",
-            "Guest4"
-    };
+    std::vector<std::shared_ptr<Utils::GuestProperties>> guests;
+    guests.push_back(std::make_shared<Utils::GuestProperties>("Guest", 0));
+    guests.push_back(std::make_shared<Utils::GuestProperties>("Guest1", 1));
+    guests.push_back(std::make_shared<Utils::GuestProperties>("Guest2", 2));
     Utils::GuestsPacket guestsPacket(guests);
     auto sig =  Utils::SignalManager::GetSignal(guestsPacket.Data());
     Utils::GuestsPacket pack(sig.second);
-    ASSERT_EQ(pack.GetGuests(), guests);
+    ASSERT_EQ(pack.GetGuests().size(), guests.size());
+    for(int i = 0; i < guests.size(); ++i) {
+        ASSERT_EQ(guests[i]->Id, pack.GetGuests()[i]->Id);
+        ASSERT_EQ(guests[i]->Name, pack.GetGuests()[i]->Name);
+    }
 }
 
 TEST(PacketTest, ChannelsPacket) {
@@ -55,24 +57,28 @@ TEST(PacketTest, NewChannelPacket) {
     channel->Name = "Channel#" + std::to_string(rand() % 500);
     channel->Access = static_cast<bool>(rand() % 2);
     channel->Places = rand() % 64;
+    uint32_t adminId = 0;
 
-    Utils::NewChannelPacket newChannelPacket(channel);
+    Utils::NewChannelPacket newChannelPacket(channel, adminId);
     auto sig = Utils::SignalManager::GetSignal(newChannelPacket.Data());
     Utils::NewChannelPacket pack(sig.second);
     auto channelFromPacket = pack.GetChannel();
     ASSERT_EQ(channel->Name, channelFromPacket->Name);
     ASSERT_EQ(channel->Access, channelFromPacket->Access);
     ASSERT_EQ(channel->Places, channelFromPacket->Places);
+    ASSERT_EQ(adminId, pack.GetAdminId());
 }
 
 TEST(PacketTest, CloseChannelPacket) {
     auto closeChannelName = "Channel#24";
-    Utils::CloseChannelPacket closeChannelPacket(closeChannelName);
+    uint32_t uid = 0;
+    Utils::CloseChannelPacket closeChannelPacket(closeChannelName, uid);
     auto sig = Utils::SignalManager::GetSignal(closeChannelPacket.Data());
 
     Utils::CloseChannelPacket pack(sig.second);
     auto closeName = pack.GetChannelName();
     ASSERT_EQ(closeChannelName, closeName);
+    ASSERT_EQ(uid, pack.GetUserId());
 }
 
 TEST(PacketTest, GuestUpdatePack) {
@@ -102,4 +108,56 @@ TEST(PacketTest, PMPacket) {
     ASSERT_EQ(message, packMsg);
     ASSERT_EQ(fromId, packFromId);
     ASSERT_EQ(toId, packToId);
+}
+
+TEST(PacketTest, ChnlConnectPack) {
+    auto channelName = "Channel#24";
+    uint32_t userId = 0;
+    Utils::ChannelConnectPacket channelConnectPacket(userId, channelName);
+    auto sig = Utils::SignalManager::GetSignal(channelConnectPacket.Data());
+
+    Utils::ChannelConnectPacket pack(sig.second);
+    auto packChannelName = pack.GetChannel();
+    auto packUsrId = pack.GetUserId();
+    ASSERT_EQ(channelName, packChannelName);
+    ASSERT_EQ(userId, packUsrId);
+}
+
+TEST(PacketTest, DiscPack) {
+    uint32_t userId = 0;
+    Utils::DisconnectPacket disconnectPacket(userId);
+    auto sig = Utils::SignalManager::GetSignal(disconnectPacket.Data());
+
+    Utils::DisconnectPacket pack(sig.second);
+    auto packUsrId = pack.GetUserId();
+    ASSERT_EQ(userId, packUsrId);
+}
+
+TEST(PacketTest, ChnlLeavePack) {
+    uint32_t userId = 0;
+    auto channelName = "Channel#1";
+    Utils::ChannelLeavePacket channelLeavePacket(userId, channelName);
+    auto sig = Utils::SignalManager::GetSignal(channelLeavePacket.Data());
+
+    Utils::ChannelLeavePacket pack(sig.second);
+    auto packUserId = pack.GetUserId();
+    auto packChannel = pack.GetChannelName();
+    ASSERT_EQ(userId, packUserId);
+    ASSERT_EQ(channelName, packChannel);
+}
+
+TEST(PacketTest, ChnlMessagePack) {
+    uint32_t userId = 0;
+    auto channelName = "Channel#1";
+    auto message = "Hello";
+    Utils::ChannelMessagePacket channelMessagePacket(userId, channelName, message);
+    auto sig = Utils::SignalManager::GetSignal(channelMessagePacket.Data());
+
+    Utils::ChannelMessagePacket pack(sig.second);
+    auto packUserId = pack.GetUserId();
+    auto packChannel = pack.GetChannelName();
+    auto packMessage = pack.GetMessage();
+    ASSERT_EQ(userId, packUserId);
+    ASSERT_EQ(channelName, packChannel);
+    ASSERT_EQ(message, packMessage);
 }

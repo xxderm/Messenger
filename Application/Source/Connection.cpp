@@ -1,11 +1,11 @@
 #include "Connection.hpp"
 
-namespace Application {
+namespace Application::Model {
     TcpCoonection::~TcpCoonection() {
         SDLNet_TCP_Close(mSocket);
     }
 
-    bool TcpCoonection::Send(void* data, uint32_t len) {
+    bool TcpCoonection::Send(char* data, uint32_t len) {
         if (SDLNet_TCP_Send(mSocket, data, len) >= 0)
             return true;
         return false;
@@ -30,6 +30,15 @@ namespace Application {
 
     void TcpCoonection::Disconnect() {
         SDLNet_TCP_Close(mSocket);
+    }
+
+    bool TcpCoonection::Receive() {
+        char buffer[DEFAULT_BUFFER_LEN];
+        int countRec = SDLNet_TCP_Recv(mSocket, buffer, DEFAULT_BUFFER_LEN);
+        if (countRec > 0) {
+            return true;
+        }
+        return false;
     }
 
 }

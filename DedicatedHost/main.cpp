@@ -1,10 +1,7 @@
-#include "Server.hpp"
-#include "Packet.hpp"
+#include "ServerController.hpp"
 
 int main(int argc, char** argv) {
-    auto server = new DedicatedHost::Server();
-    server->Initialize(5000);
-    server->Launch();
+    DedicatedHost::Controller::ServerController serverController;
     system("pause");
     return 0;
 }

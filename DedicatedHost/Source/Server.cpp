@@ -1,6 +1,7 @@
+#include <Packet.hpp>
 #include "../Include/Server.hpp"
 
-namespace DedicatedHost {
+namespace DedicatedHost::Model {
 
     bool Server::Initialize(uint32_t port) {
         SDL_Init(SDL_INIT_EVERYTHING);
@@ -55,7 +56,7 @@ namespace DedicatedHost {
                         --countRdy;
                         continue;
                     }
-                    std::cout << data << std::endl;
+                    ProcessPacket(data);
                     delete data;
                     --countRdy;
                 }
@@ -87,6 +88,7 @@ namespace DedicatedHost {
             std::cout << "Error add socket\n";
             SDL_Quit();
         }
+        mConnectCallBack(index);
         std::cout << "New client: " << mGuests[index] << std::endl;
         return 1;
     }
@@ -110,6 +112,7 @@ namespace DedicatedHost {
         if (countRec <= 0) {
             std::cout << "Client disconnect: " << mGuests[index] << std::endl;
             CloseSock(index);
+            mDisconnectCallBack(index);
             return 0;
         }
         else {
@@ -117,6 +120,47 @@ namespace DedicatedHost {
             memcpy(data, buffer, DEFAULT_BUFFER_LEN);
             return data;
         }
+    }
+
+    void Server::ProcessPacket(char* data) {
+        try {
+            auto signal = Utils::SignalManager::GetSignal(data);
+            std::cout << signal.first << std::endl;
+            mReceiveCallBack(signal.first, signal.second);
+        }
+        catch (...) {
+            std::cout << "Packet data error\n";
+        }
+    }
+
+    void Server::OnReceive(std::function<void(Utils::Signal, std::shared_ptr<Utils::InputMemory>)> fn) {
+        this->mReceiveCallBack = fn;
+    }
+
+    bool Server::Send(std::shared_ptr<Utils::Packet> packet) {
+        for (int i = 0; i < MaxGuests; ++i) {
+            if (mGuests[i] == 0) break;
+            auto packetData = packet->Data();
+            auto packetSize = packet->OutputDataSize();
+            SDLNet_TCP_Send(mGuests[i], packetData, packetSize);
+        }
+        return true;
+    }
+
+    void Server::OnConnect(std::function<void(uint32_t)> fn) {
+        mConnectCallBack = fn;
+    }
+
+    void Server::OnDisconnect(std::function<void(uint32_t)> fn) {
+        mDisconnectCallBack = fn;
+    }
+
+    bool Server::SendTo(uint32_t index, std::shared_ptr<Utils::Packet> packet) {
+        if (mGuests[index] == 0) return false;
+        auto packetData = packet->Data();
+        auto packetSize = packet->OutputDataSize();
+        SDLNet_TCP_Send(mGuests[index], packetData, packetSize);
+        return true;
     }
 
 }
