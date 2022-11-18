@@ -21,6 +21,7 @@ namespace Utils {
         DISCONNECT,
         CHANNEL_LEAVE,
         CHANNEL_MESSAGE,
+        SERVER_STOP
     };
 
     class Packet {

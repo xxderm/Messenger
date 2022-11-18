@@ -5,12 +5,13 @@
 #include "Packet.hpp"
 #include <SDL_net.h>
 #include <SDL.h>
+#include <functional>
 
 namespace Application::Model {
 
-    class TcpCoonection final {
+    class TcpConnection final {
     public:
-        TcpCoonection() = default;
+        TcpConnection();
 
         bool Init(uint32_t port);
 
@@ -20,9 +21,9 @@ namespace Application::Model {
 
         bool Send(char* data, uint32_t len);
 
-        bool Receive();
+        bool Receive(std::pair<Utils::Signal, std::shared_ptr<Utils::InputMemory>>& signalData);
 
-        ~TcpCoonection();
+        ~TcpConnection();
     private:
         TCPsocket mSocket;
         IPaddress mServerIp;

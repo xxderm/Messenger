@@ -65,6 +65,7 @@ namespace DedicatedHost::Model {
     }
 
     Server::~Server() {
+        Stop();
         if (SDLNet_TCP_DelSocket(mSockSet, mServerSocket) == -1) {
             std::cout << "Failed to delete server socket\n";
         }
@@ -73,6 +74,10 @@ namespace DedicatedHost::Model {
     }
 
     void Server::Stop() noexcept {
+        std::shared_ptr<Utils::Packet> response =
+                std::make_shared<Utils::PacketRequest>(Utils::PacketRequest(Utils::Signal::SERVER_STOP));
+        this->Send(response);
+        std::cout << "Send STOP\n";
         mRunning = false;
     }
 

@@ -27,12 +27,15 @@ namespace Utils {
         void Stop() {
             mRunning = false;
         }
+
+        long long int GetElapsedSec() const { return mElapsedSec; }
     private:
         void Worker() {
             std::thread([this](){
                 auto beginTime = std::chrono::steady_clock::now();
                 while (mRunning) {
                     auto currentTime = std::chrono::steady_clock::now();
+                    mElapsedSec = (mInterval / 1000) - std::chrono::duration_cast<std::chrono::seconds>(currentTime - beginTime).count();
                     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - beginTime).count();
                     if (elapsed >= mInterval) {
                         mCallBack();
@@ -43,6 +46,7 @@ namespace Utils {
         }
     private:
         std::mutex mMutex{};
+        long long int mElapsedSec{};
         bool mRunning = false;
         long long mInterval;
         std::function<void()> mCallBack;
