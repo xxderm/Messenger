@@ -24,6 +24,9 @@ namespace DedicatedHost::Model {
             SDL_Quit();
         }
         SDLNet_TCP_AddSocket(mSockSet, mServerSocket);
+
+        mPacketView.Initialize();
+
         return true;
     }
 
@@ -31,6 +34,7 @@ namespace DedicatedHost::Model {
         mRunning = true;
         int index = 0;
         while (mRunning) {
+            mPacketView.Render(mRunning);
             auto countRdy = SDLNet_CheckSockets(mSockSet, 10);
             if (countRdy == -1) std::cout << SDLNet_GetError();
             if (countRdy > 0) {

@@ -19,51 +19,73 @@ namespace DedicatedHost::Controller {
     }
 
     void ServerController::HandleReceive(Utils::Signal signal, std::shared_ptr<Utils::InputMemory> input) {
+        mServer->mPacketView.AddInPacket(signal);
         switch (signal) {
             case Utils::CONNECT:
                 this->AcceptNewUser(input);
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CONNECT);
                 this->SendChannels();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNELS);
                 this->SendGuests();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::GUESTS);
                 break;
             case Utils::GUESTS:
                 this->SendGuests();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::GUESTS);
                 break;
             case Utils::CHANNELS:
                 this->SendChannels();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNELS);
                 this->SendChannelInfo();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNEL_INFO_UPDATE);
                 break;
             case Utils::NEW_CHANNEL:
                 this->AcceptNewChannel(input);
+                mServer->mPacketView.AddOutPacket(Utils::Signal::NEW_CHANNEL);
                 SendChannels();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNELS);
                 this->SendChannelInfo();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNEL_INFO_UPDATE);
                 break;
             case Utils::CLOSE_CHANNEL:
                 this->AcceptCloseChannel(input);
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CLOSE_CHANNEL);
                 this->SendChannels();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNELS);
                 this->SendChannelInfo();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNEL_INFO_UPDATE);
                 break;
             case Utils::CHANNEL_INFO_UPDATE:
                 this->SendChannelInfo();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNEL_INFO_UPDATE);
                 break;
             case Utils::GUEST_INFO_UPDATE:
                 this->GuestInfoUpdate(input);
+                mServer->mPacketView.AddOutPacket(Utils::Signal::GUEST_INFO_UPDATE);
                 break;
             case Utils::PERSONAL_MESSAGE:
                 this->SendPM(input);
+                mServer->mPacketView.AddOutPacket(Utils::Signal::PERSONAL_MESSAGE);
                 break;
             case Utils::CONNECT_CHANNEL:
                 this->ConnectToChannel(input);
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CONNECT_CHANNEL);
                 this->SendChannelInfo();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNEL_INFO_UPDATE);
                 break;
             case Utils::DISCONNECT:
                 this->AcceptCloseUser(input);
+                mServer->mPacketView.AddOutPacket(Utils::Signal::DISCONNECT);
                 break;
             case Utils::CHANNEL_LEAVE:
                 this->DisconnectFromChannel(input);
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNEL_LEAVE);
                 break;
             case Utils::CHANNEL_MESSAGE:
                 this->ChannelMessage(input);
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNEL_MESSAGE);
                 this->SendChannelInfo();
+                mServer->mPacketView.AddOutPacket(Utils::Signal::CHANNEL_INFO_UPDATE);
                 break;
         }
     }
@@ -184,7 +206,7 @@ namespace DedicatedHost::Controller {
         auto packet = Utils::ChannelMessagePacket(input);
         auto uid = packet.GetUserId();
         auto channelTitle = packet.GetChannelName();
-        auto msg = packet.GetMessage();
+        auto msg = packet.GetMessageStr();
         for (auto& channel : mChannels) {
             if (channel->GetTitle() == channelTitle) {
                 Model::MessagePtr message = std::make_shared<Model::Message>(mUsers[uid], msg);

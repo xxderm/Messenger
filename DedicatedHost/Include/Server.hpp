@@ -7,6 +7,10 @@
 #include <functional>
 #include "Packet.hpp"
 
+// TODO: render from servercontroller
+// Placeholder
+#include "PacketView.hpp"
+
 namespace DedicatedHost::Model {
 
     constexpr uint32_t MaxGuests = 64;
@@ -28,6 +32,10 @@ namespace DedicatedHost::Model {
         bool Send(std::shared_ptr<Utils::Packet> packet);
 
         bool SendTo(uint32_t index, std::shared_ptr<Utils::Packet> packet);
+
+        // TODO: render from servercontroller
+        // Placeholder
+        View::PacketView mPacketView;
 
         ~Server();
     private:

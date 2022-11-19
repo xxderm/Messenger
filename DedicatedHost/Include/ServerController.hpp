@@ -3,6 +3,7 @@
 #include "Channel.hpp"
 #include "User.hpp"
 #include <algorithm>
+#include "Packet.hpp"
 
 namespace DedicatedHost::Controller {
 

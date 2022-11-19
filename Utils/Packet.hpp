@@ -599,7 +599,7 @@ namespace Utils {
 
         std::string GetChannelName() const { return mChannelName; }
 
-        std::string GetMessage() const { return mMessage; }
+        std::string GetMessageStr() const { return mMessage; }
     private:
         uint32_t mUserId{};
         std::string mChannelName{};
