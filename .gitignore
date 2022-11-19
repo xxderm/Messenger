@@ -4,6 +4,8 @@
 Vendor/
 cmake/
 
+stb_image.h
+
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml
