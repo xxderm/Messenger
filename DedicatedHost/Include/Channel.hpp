@@ -29,6 +29,10 @@ namespace DedicatedHost::Model {
         bool GetAccess() const { return mAccess; }
 
         uint32_t GetAdminId() const { return mAdminId; }
+
+        Users GetUsers() const { return mUsers; }
+
+        Messages GetMessages() const { return mMessages; }
     private:
         uint32_t mAdminId{};
         std::string mPass{};

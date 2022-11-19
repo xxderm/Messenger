@@ -22,18 +22,28 @@ namespace DedicatedHost::Controller {
         switch (signal) {
             case Utils::CONNECT:
                 this->AcceptNewUser(input);
+                this->SendChannels();
+                this->SendGuests();
                 break;
             case Utils::GUESTS:
                 this->SendGuests();
                 break;
             case Utils::CHANNELS:
                 this->SendChannels();
+                this->SendChannelInfo();
                 break;
             case Utils::NEW_CHANNEL:
                 this->AcceptNewChannel(input);
+                SendChannels();
+                this->SendChannelInfo();
                 break;
             case Utils::CLOSE_CHANNEL:
                 this->AcceptCloseChannel(input);
+                this->SendChannels();
+                this->SendChannelInfo();
+                break;
+            case Utils::CHANNEL_INFO_UPDATE:
+                this->SendChannelInfo();
                 break;
             case Utils::GUEST_INFO_UPDATE:
                 this->GuestInfoUpdate(input);
@@ -43,6 +53,7 @@ namespace DedicatedHost::Controller {
                 break;
             case Utils::CONNECT_CHANNEL:
                 this->ConnectToChannel(input);
+                this->SendChannelInfo();
                 break;
             case Utils::DISCONNECT:
                 this->AcceptCloseUser(input);
@@ -58,6 +69,8 @@ namespace DedicatedHost::Controller {
 
     void ServerController::SendGuests() {
         std::vector<std::shared_ptr<Utils::GuestProperties>> guests;
+        if (mUsers.empty())
+            return;
         for (auto& user : mUsers) {
             Utils::GuestProperties guest;
             guest.Id = user.second->GetId();
@@ -70,6 +83,8 @@ namespace DedicatedHost::Controller {
 
     void ServerController::SendChannels() {
         std::vector<std::shared_ptr<Utils::ChannelPacketProperties>> channels;
+        if (mChannels.empty())
+            return;
         for (auto& channel : mChannels) {
             Utils::ChannelPacketProperties ch;
             ch.Name = channel->GetTitle();
@@ -132,7 +147,9 @@ namespace DedicatedHost::Controller {
                 index,
                 std::make_shared<Model::User>( packet )
         ));
-        mServer->SendTo(index, std::make_shared<Utils::ConnectPacket>(packet));
+        mUsers[index]->SetId(index);
+        auto newPacket = Utils::ConnectPacket(mUsers[index]->GetName(), index);
+        mServer->SendTo(index, std::make_shared<Utils::ConnectPacket>(newPacket));
     }
 
     void ServerController::ConnectToChannel(std::shared_ptr<Utils::InputMemory> input) {
@@ -172,6 +189,34 @@ namespace DedicatedHost::Controller {
                 Model::MessagePtr message = std::make_shared<Model::Message>(mUsers[uid], msg);
                 channel->AddMessage(message);
             }
+        }
+    }
+
+    void ServerController::SendChannelInfo() {
+        for (auto& channel : mChannels) {
+            std::shared_ptr<Utils::ChannelInfoProperties> prop = std::make_shared<Utils::ChannelInfoProperties>();
+            prop->AdminId = channel->GetAdminId();
+            prop->Title = channel->GetTitle();
+            auto messages = channel->GetMessages();
+            auto users = channel->GetUsers();
+            for (auto& msg : messages) {
+                auto user = msg->GetUser();
+                auto content = msg->GetContent();
+                Utils::MessageProperties messageProperties;
+                messageProperties.Message = content;
+                messageProperties.Id = user->GetId();
+                prop->Messages.push_back(messageProperties);
+            }
+            for (auto& user : users) {
+                Utils::UserProperties userProperties;
+                auto uid = user.second->GetId();
+                auto name = user.second->GetName();
+                userProperties.Id = uid;
+                userProperties.Name = name;
+                prop->Users.push_back(userProperties);
+            }
+            std::shared_ptr<Utils::Packet> packet = std::make_shared<Utils::ChannelInfoUpdatePacket>(prop);
+            mServer->Send(packet);
         }
     }
 

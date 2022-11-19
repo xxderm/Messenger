@@ -24,6 +24,7 @@ namespace DedicatedHost::Controller {
         void ConnectToChannel(std::shared_ptr<Utils::InputMemory> input);
         void DisconnectFromChannel(std::shared_ptr<Utils::InputMemory> input);
         void ChannelMessage(std::shared_ptr<Utils::InputMemory> input);
+        void SendChannelInfo();
     private:
         std::shared_ptr<Model::Server> mServer;
         Model::Users mUsers;

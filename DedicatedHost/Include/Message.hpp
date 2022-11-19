@@ -11,6 +11,10 @@ namespace DedicatedHost::Model {
     class Message final {
     public:
         explicit Message(UserPtr user, std::string msg);
+
+        UserPtr GetUser() const { return mUser; }
+
+        std::string GetContent() const { return mMessage; }
     private:
         UserPtr mUser;
         std::string mMessage{};

@@ -21,7 +21,8 @@ namespace Utils {
         DISCONNECT,
         CHANNEL_LEAVE,
         CHANNEL_MESSAGE,
-        SERVER_STOP
+        SERVER_STOP,
+        CHANNEL_INFO_UPDATE
     };
 
     class Packet {
@@ -357,6 +358,113 @@ namespace Utils {
         uint32_t mFrom{};
         uint32_t mTo{};
         std::string mMessage{};
+    };
+
+    struct UserProperties {
+        uint32_t Id{};
+        std::string Name{};
+    };
+
+    struct MessageProperties {
+        uint32_t Id;
+        std::string Message{};
+    };
+
+    struct ChannelInfoProperties {
+        std::string Title{};
+        uint32_t AdminId{};
+        std::vector<UserProperties> Users;
+        std::vector<MessageProperties> Messages;
+    };
+
+    class ChannelInfoUpdatePacket : public Packet {
+    public:
+        explicit ChannelInfoUpdatePacket(std::shared_ptr<ChannelInfoProperties> prop) : mChannel(std::move(prop)) {}
+
+        explicit ChannelInfoUpdatePacket(std::shared_ptr<InputMemory> input) {
+            mChannel = std::make_shared<ChannelInfoProperties>();
+            uint32_t titleSize = 0;
+            input->Read(&titleSize, sizeof(uint32_t));
+            mChannel->Title.resize(titleSize);
+            input->Read(&mChannel->Title[0], titleSize);
+            input->Read(&mChannel->AdminId, sizeof(uint32_t));
+            uint32_t usrCount = 0;
+            input->Read(&usrCount, sizeof(uint32_t));
+            for (int i = 0; i < usrCount; ++i) {
+                uint32_t id;
+                uint32_t len;
+                std::string name;
+                input->Read(&id, sizeof(uint32_t));
+                input->Read(&len, sizeof(uint32_t));
+                name.resize(len);
+                input->Read(&name[0], len);
+                Utils::UserProperties prop;
+                prop.Name = name;
+                prop.Id = id;
+                mChannel->Users.push_back(prop);
+            }
+            uint32_t msgCount = 0;
+            input->Read(&msgCount, sizeof(uint32_t));
+            for (int j = 0; j < msgCount; ++j) {
+                uint32_t id;
+                uint32_t contentLen;
+                std::string msg;
+                input->Read(&id, sizeof(uint32_t));
+                input->Read(&contentLen, sizeof(uint32_t));
+                msg.resize(contentLen);
+                input->Read(&msg[0], contentLen);
+                Utils::MessageProperties msgprop;
+                msgprop.Message = msg;
+                msgprop.Id = id;
+                mChannel->Messages.push_back(msgprop);
+            }
+        }
+
+        char* Data() override {
+            uint32_t channelNameSize = mChannel->Title.size();
+            uint32_t userNameTotalSize = 0;
+            uint32_t userCount = mChannel->Users.size();
+            uint32_t messageCount = mChannel->Messages.size();
+            uint32_t messageContentTotalSize = 0;
+            for (auto msg : mChannel->Messages)
+                messageContentTotalSize += msg.Message.size();
+            for (auto user : mChannel->Users)
+                userNameTotalSize += user.Name.size();
+            auto sig = Signal::CHANNEL_INFO_UPDATE;
+            uint32_t packetSize = sizeof(Signal) + sizeof(uint32_t) + channelNameSize + sizeof(uint32_t) +
+                    sizeof(uint32_t) + (sizeof(uint32_t) * userCount) + (sizeof(uint32_t) * userCount) + userNameTotalSize +
+                    sizeof(uint32_t) + (sizeof(uint32_t) * messageCount) + (sizeof(uint32_t) * messageCount) + messageContentTotalSize;
+            mOutput = std::make_shared<OutputMemory>(packetSize);
+            mOutput->Write(&sig, sizeof(Signal));
+            mOutput->Write(&channelNameSize, sizeof(uint32_t));
+            mOutput->Write(&mChannel->Title[0], channelNameSize);
+            mOutput->Write(&mChannel->AdminId, sizeof(uint32_t));
+            mOutput->Write(&userCount, sizeof(uint32_t));
+            for (auto user : mChannel->Users) {
+                auto id = user.Id;
+                auto name = user.Name;
+                auto nameLen = name.size();
+                mOutput->Write(&id, sizeof(uint32_t));
+                mOutput->Write(&nameLen, sizeof(uint32_t));
+                mOutput->Write(&name[0], nameLen);
+            }
+            mOutput->Write(&messageCount, sizeof(uint32_t));
+            for (auto msg : mChannel->Messages) {
+                auto id = msg.Id;
+                auto content = msg.Message;
+                auto conLen = content.size();
+                mOutput->Write(&id, sizeof(uint32_t));
+                mOutput->Write(&conLen, sizeof(uint32_t));
+                mOutput->Write(&content[0], conLen);
+            }
+            return mOutput->GetData();
+        }
+
+        uint32_t OutputDataSize() override { return mOutput->GetBufferSize(); }
+
+        std::shared_ptr<ChannelInfoProperties> GetChannel() const { return mChannel; }
+    private:
+        std::shared_ptr<ChannelInfoProperties> mChannel;
     };
 
     class ChannelConnectPacket : public Packet {

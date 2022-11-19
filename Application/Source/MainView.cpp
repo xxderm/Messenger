@@ -40,8 +40,7 @@ namespace Application::View {
     }
 
     void MainView::Initialize() {
-        mUserName.resize(30);
-        mUserName = "UserName";
+        srand(time(0));
 
         auto& io = ImGui::GetIO();
         mStatusBarFont = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\Arial.ttf", 14, NULL,
@@ -55,6 +54,7 @@ namespace Application::View {
         LoadTextureFromFile("../../Resources/close.png", &mCloseWndTexture, &w, &h);
         LoadTextureFromFile("../../Resources/chat icon.png", &mChatIconTexture, &w, &h);
         LoadTextureFromFile("../../Resources/edit.png", &mUserNameEditTexture, &w, &h);
+        LoadTextureFromFile("../../Resources/send.png", &mSendMessageTexture, &w, &h);
     }
 
     void MainView::SetServerStatus(bool status) {
@@ -67,18 +67,6 @@ namespace Application::View {
 
     void MainView::RenderLeftPanel(SDL_Window* window, SDL_Renderer* renderer) {
         ImGui::PushFont(mBaseFont);
-
-        std::vector<std::string> channels = {
-                "Channel#1",
-                "Channel#2",
-                "Channel#3",
-                "Channel#4",
-                "Channel#5",
-                "Channel#6",
-                "Channel#7",
-                "Channel#8",
-                "Channel#9"
-        };
 
         std::vector<std::string> guests = {
                 "GuestName#1",
@@ -107,15 +95,18 @@ namespace Application::View {
         ImGui::BeginTabBar("##LeftPanelTabs");
         if (ImGui::BeginTabItem("Каналы")) {
             if (ImGui::BeginTable("##ChannelsGrid", 1)) {
-                for (int i = 0; i < channels.size(); ++i) {
+                for (int i = 0; i < mChannels.size(); ++i) {
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
                     ImGui::TableSetBgColor(ImGuiTableBgTarget_::ImGuiTableBgTarget_CellBg,
                                            IM_COL32(33, 53, 122, 255));
-                    auto str = "Title: " + channels[i] + "\nPlaces: 64\n" + "Access: public";
+                    auto str = "Title: " + mChannels[i].Title + "\nPlaces: "
+                            + std::to_string(mChannels[i].Places) + "\n" + "Access: " + (mChannels[i].Access ? "Открытый" : "Закрытый");
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
-                    if (ImGui::Selectable(str.c_str(), false, ImGuiSelectableFlags_SpanAllColumns))
+                    if (ImGui::Selectable(str.c_str(), false, ImGuiSelectableFlags_SpanAllColumns)) {
                         mChannelJoinWnd = true;
+                        mSelectedChannelId = i;
+                    }
                     ImGui::TableNextRow();
                 }
                 ImGui::TableNextRow();
@@ -145,12 +136,12 @@ namespace Application::View {
         }
         if (ImGui::BeginTabItem("Люди")) {
             if (ImGui::BeginTable("##GuestsList", 1)) {
-                for (int i = 0; i < guests.size(); ++i) {
+                for (int i = 0; i < mGuests.size(); ++i) {
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
                     ImGui::TableSetBgColor(ImGuiTableBgTarget_::ImGuiTableBgTarget_CellBg,
                                            IM_COL32(33, 53, 122, 255));
-                    auto str = guests[i];
+                    auto str = mGuests[i].Name + "#" + std::to_string(mGuests[i].Id);
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
                     ImGui::Selectable(str.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
                     ImGui::TableNextRow();
@@ -202,9 +193,23 @@ namespace Application::View {
 
     void MainView::RenderChatPanel(SDL_Window *window, SDL_Renderer *renderer) {
 
-        uint32_t currentUsrId = 0;
-
         std::vector<std::string> usrNames = {
+                "usr1",
+                "usr0",
+                "usr1",
+                "usr1",
+                "usr1",
+                "usr0",
+                "usr1",
+                "usr1",
+                "usr1",
+                "usr0",
+                "usr1",
+                "usr1",
+                "usr1",
+                "usr0",
+                "usr1",
+                "usr1",
                 "usr1",
                 "usr0",
                 "usr1",
@@ -215,10 +220,42 @@ namespace Application::View {
                 1,
                 0,
                 1,
+                1,
+                1,
+                0,
+                1,
+                1,
+                1,
+                0,
+                1,
+                1,
+                1,
+                0,
+                1,
+                1,
+                1,
+                0,
+                1,
                 1
         };
 
         std::vector<std::string> messages = {
+            "HelloFrom1 Test text",
+            "HelloFrom0 Test Text from 0 test text from 0",
+            "HelloFrom1 test test text test test from",
+            "HelloFrom1 test test small text test",
+            "HelloFrom1 Test text",
+            "HelloFrom0 Test Text from 0 test text from 0",
+            "HelloFrom1 test test text test test from",
+            "HelloFrom1 test test small text test",
+            "HelloFrom1 Test text",
+            "HelloFrom0 Test Text from 0 test text from 0",
+            "HelloFrom1 test test text test test from",
+            "HelloFrom1 test test small text test",
+            "HelloFrom1 Test text",
+            "HelloFrom0 Test Text from 0 test text from 0",
+            "HelloFrom1 test test text test test from",
+            "HelloFrom1 test test small text test",
             "HelloFrom1 Test text",
             "HelloFrom0 Test Text from 0 test text from 0",
             "HelloFrom1 test test text test test from",
@@ -242,23 +279,53 @@ namespace Application::View {
             ImGui::SetCursorPos(ImVec2((chatPanelSize.x / 2.) - 50, (chatPanelSize.y / 2) - 37.5));
             ImGui::Image((ImTextureID) mChatIconTexture, ImVec2(100, 75));
         }
-        if (ImGui::BeginTable("##ChatGrid", 2)) {
-            for (int i = 0; i < messages.size(); ++i) {
-                ImGui::TableNextRow();
-                int column = 1;
-                if (usrMessage[i] == currentUsrId)
-                    column = 0;
-                ImGui::TableSetColumnIndex(column);
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_::ImGuiTableBgTarget_CellBg,
-                        IM_COL32(38, 42, 103, 255));
-                auto usrNameText = " " + usrNames[i] + ":";
-                ImGui::Text(usrNameText.c_str());
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
-                ImGui::TextWrapped(messages[i].c_str());
-                ImGui::TableNextRow();
-                ImGui::TableNextRow();
+        if (!mChannels.empty() || !mMessages.empty()) {
+            ImGui::BeginTabBar("##ChatChannelsTab");
+            for (auto &channel : mChannels) {
+                bool connected = false;
+                for (auto &usr : channel.Users) {
+                    if (usr.Id == *mUid.get()) {
+                        connected = true;
+                        break;
+                    }
+                }
+                if (connected) {
+                    if (ImGui::BeginTabItem(channel.Title.c_str())) {
+                        if (ImGui::BeginTable("##ChatGrid", 2)) {
+                            for (int i = 0; i < messages.size(); ++i) {
+                                ImGui::TableNextRow();
+                                int column = 1;
+                                if (usrMessage[i] == *mUid.get())
+                                    column = 0;
+                                ImGui::TableSetColumnIndex(column);
+                                ImGui::TableSetBgColor(ImGuiTableBgTarget_::ImGuiTableBgTarget_CellBg,
+                                                       IM_COL32(38, 42, 103, 255));
+                                auto usrNameText = " " + usrNames[i] + ":";
+                                ImGui::Text(usrNameText.c_str());
+                                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
+                                ImGui::TextWrapped(messages[i].c_str());
+                                ImGui::TableNextRow();
+                                ImGui::TableNextRow();
+                            }
+                            ImGui::EndTable();
+                            char buff[50];
+                            ImGui::SetCursorPosY(static_cast<float>(winHeight - 90) - 30);
+                            ImGui::PushItemWidth(static_cast<float>(winWidth - 250) - 50);
+                            ImGui::InputText("##ChatTextInput", buff, 50);
+                            ImGui::PopItemWidth();
+                            ImGui::SameLine();
+                            if (ImGui::ImageButton(
+                                    (ImTextureID)mSendMessageTexture, ImVec2(24, 24),
+                                    ImVec2(0,0), ImVec2(1, 1), 0
+                                    )) {
+                                // TODO:
+                            }
+                        }
+                        ImGui::EndTabItem();
+                    }
+                }
             }
-            ImGui::EndTable();
+            ImGui::EndTabBar();
         }
 
         ImGui::End();
@@ -277,16 +344,19 @@ namespace Application::View {
         ImGui::Begin("##UserNameBar", 0, ImGuiWindowFlags_NoDecoration |
                                          ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoMove |
                                          ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBackground);
-        if (!mEditUserName)
-            ImGui::Selectable(mUserName.c_str(), &mEditUserName, 0, ImVec2(270, 20));
+        if (!mEditUserName) {
+            auto userName = *mUserName.get() +  "#" + std::to_string(*mUid.get());
+            ImGui::Selectable(mUserName->c_str(), &mEditUserName, 0, ImVec2(270, 20));
+        }
         if (mEditUserName) {
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() - 4);
-            ImGui::InputText("##Input", &mUserName[0], 30);
+            ImGui::InputText("##Input", &mUserName->data()[0], 30);
             ImGui::SameLine();
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1);
             if (ImGui::ImageButton((ImTextureID)mUserNameEditTexture, ImVec2(16, 16))) {
                 mEditUserName = false;
+                mOnUserNameUpdateCallBack();
             }
         }
         ImGui::End();
@@ -297,9 +367,6 @@ namespace Application::View {
     void MainView::RenderNewChannelForm(SDL_Window *window, SDL_Renderer *renderer) {
         ImGui::PushFont(mBaseFont);
 
-        double places = 0.;
-        char channelNameBuffer[10]{'\0'};
-        const char* items[] = { "открытый", "закрытый" };
         static const char* current_item = NULL;
         if (mNewChannelFormOpened) {
             ImGui::Begin("Новый канал", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
@@ -310,7 +377,7 @@ namespace Application::View {
                 ImGui::Text("Название: ");
 
                 ImGui::TableSetColumnIndex(1);
-                ImGui::InputText("##inputChannelTitle", channelNameBuffer, 10);
+                ImGui::InputText("##inputChannelTitle", mChannelNameBuffer, 10);
 
                 ImGui::TableNextRow();
 
@@ -319,11 +386,11 @@ namespace Application::View {
 
                 ImGui::TableSetColumnIndex(1);
                 if (ImGui::BeginCombo("##inputAccess", "открытый")) {
-                    for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
+                    for (int n = 0; n < IM_ARRAYSIZE(mItemChannelAccess); n++) {
                         bool is_selected = (current_item ==
-                                            items[n]);
-                        if (ImGui::Selectable(items[n], is_selected))
-                            current_item = items[n];
+                                mItemChannelAccess[n]);
+                        if (ImGui::Selectable(mItemChannelAccess[n], is_selected))
+                            current_item = mItemChannelAccess[n];
                         if (is_selected)
                             ImGui::SetItemDefaultFocus();
                     }
@@ -336,7 +403,7 @@ namespace Application::View {
                 ImGui::Text("Мест: ");
 
                 ImGui::TableSetColumnIndex(1);
-                ImGui::InputDouble("##inputPlaces", &places);
+                ImGui::InputInt("##inputPlaces", &mChannelPlaces);
 
                 ImGui::TableNextRow();
 
@@ -347,7 +414,11 @@ namespace Application::View {
 
                 ImGui::TableSetColumnIndex(1);
                 if (ImGui::Button("Создать")) {
-
+                    mChannelCreateCallBack(mChannelNameBuffer, mChannelPlaces, true);
+                    std::cout << "TITLE:" << mChannelNameBuffer << std::endl;
+                    std::cout << "id:" << *mUid.get() << std::endl;
+                    mJoinChannelCallBack(*mUid.get(), mChannelNameBuffer);
+                    mNewChannelFormOpened = false;
                 }
 
                 ImGui::EndTable();
@@ -370,7 +441,7 @@ namespace Application::View {
                 ImGui::Text("Название: ");
 
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("Title");
+                ImGui::Text(mChannels[mSelectedChannelId].Title.c_str());
 
                 ImGui::TableNextRow();
 
@@ -378,7 +449,7 @@ namespace Application::View {
                 ImGui::Text("Доступ: ");
 
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("Public");
+                ImGui::Text(mChannels[mSelectedChannelId].Access ? "Открытый" : "Закрытый");
 
                 ImGui::TableNextRow();
 
@@ -386,18 +457,21 @@ namespace Application::View {
                 ImGui::Text("Мест: ");
 
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("64");
+                ImGui::Text(std::to_string(mChannels[mSelectedChannelId].Places).c_str());
 
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
                 if (ImGui::Button("Отмена")) {
                     mChannelJoinWnd = false;
+                    mSelectedChannelId = -1;
                 }
 
                 ImGui::TableSetColumnIndex(1);
                 if (ImGui::Button("Подключиться")) {
-
+                    mJoinChannelCallBack(*mUid.get(), mChannels[mSelectedChannelId].Title);
+                    mChannelJoinWnd = false;
+                    mSelectedChannelId = -1;
                 }
 
                 ImGui::EndTable();
@@ -406,6 +480,38 @@ namespace Application::View {
 
             ImGui::PopFont();
         }
+    }
+
+    void MainView::UpdateGuestsModel(const Model::Guests& guests) {
+        this->mGuests = guests;
+    }
+
+    void MainView::UpdateMessagesModel(const Model::Messages &messages) {
+        this->mMessages = messages;
+    }
+
+    void MainView::UpdateChannelsModel(const Model::Channels &channels) {
+        this->mChannels = channels;
+    }
+
+    void MainView::UpdateUserName(std::shared_ptr<std::string> username) {
+        mUserName = username;
+    }
+
+    void MainView::OnUserNameUpdate(std::function<void()> fn) {
+        mOnUserNameUpdateCallBack = fn;
+    }
+
+    void MainView::SetUid(std::shared_ptr<uint32_t> uid) {
+        this->mUid = uid;
+    }
+
+    void MainView::OnChannelCreate(std::function<void(std::string, uint32_t, bool)> fn) {
+        this->mChannelCreateCallBack = fn;
+    }
+
+    void MainView::OnJoinChannel(std::function<void(uint32_t, std::string)> function) {
+        mJoinChannelCallBack = function;
     }
 
 }

@@ -31,7 +31,9 @@ namespace Application::Model {
     }
 
     bool TcpConnection::Receive(std::pair<Utils::Signal, std::shared_ptr<Utils::InputMemory>>& signalData) {
-        char buffer[DEFAULT_BUFFER_LEN];
+        //char buffer[DEFAULT_BUFFER_LEN];
+        // TODO: this
+        char* buffer = new char[DEFAULT_BUFFER_LEN];
         int countRec = SDLNet_TCP_Recv(mSocket, buffer, DEFAULT_BUFFER_LEN);
         if (countRec > 0) {
             signalData = Utils::SignalManager::GetSignal(buffer);
