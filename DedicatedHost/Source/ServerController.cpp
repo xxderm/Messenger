@@ -63,6 +63,7 @@ namespace DedicatedHost::Controller {
                 break;
             case Utils::CHANNEL_MESSAGE:
                 this->ChannelMessage(input);
+                this->SendChannelInfo();
                 break;
         }
     }

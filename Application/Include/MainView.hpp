@@ -39,6 +39,8 @@ namespace Application::View {
 
         void OnJoinChannel(std::function<void(uint32_t, std::string)> function);
 
+        void OnSendMessageChannel(std::function<void(uint32_t, std::string, std::string)> fn);
+
         void SetUid(std::shared_ptr<uint32_t> uid);
     private:
         void RenderStatusBar(SDL_Window* window, SDL_Renderer* renderer);
@@ -77,8 +79,11 @@ namespace Application::View {
         std::function<void()> mOnUserNameUpdateCallBack;
         std::function<void(std::string, uint32_t, bool access)> mChannelCreateCallBack;
         std::function<void(uint32_t, std::string)> mJoinChannelCallBack;
+        std::function<void(uint32_t, std::string, std::string)> mMessageToChannelCallBack;
         int mChannelPlaces = 0;
         char mChannelNameBuffer[10]{'\0'};
+        char mMessageBuffer[50]{'\0'};
+        std::string mCurrentChannelTitle{};
         const char* mItemChannelAccess[2] = { "открытый", "закрытый" };
         int mSelectedChannelId = -1;
     };

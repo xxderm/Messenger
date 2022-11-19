@@ -26,6 +26,9 @@ namespace Application::Controller {
         mMainView->SetUid(mUid);
         mMainView->OnUserNameUpdate([this](){ this->SendGuestInfo(); });
         mMainView->OnJoinChannel([this](uint32_t uid, std::string title){ this->JoinChannel(uid, title); });
+        mMainView->OnSendMessageChannel([this](uint32_t uid, std::string title, std::string msg){
+           this->OnChannelMessageSend(uid, title, msg);
+        });
         mMainView->OnChannelCreate([this](std::string _title, uint32_t _places, bool _access){
             this->ChannelCreate(_title, _places, _access);
         });
@@ -264,6 +267,7 @@ namespace Application::Controller {
     }
 
     void ClientController::UpdateChannelInfo(std::shared_ptr<Utils::InputMemory> input) {
+        if(mChannels.empty()) return;
         auto packet = Utils::ChannelInfoUpdatePacket(input);
         auto channelInfo = packet.GetChannel();
         for (auto& channel : mChannels) {
@@ -290,6 +294,15 @@ namespace Application::Controller {
             }
         }
         mMainView->UpdateChannelsModel(mChannels);
+    }
+
+    void ClientController::OnChannelMessageSend(uint32_t id, std::string title, std::string msg) {
+        std::cout << "ID: " << id << ", Channel: " << title << ", Message: " << msg << std::endl;
+        auto packet = Utils::ChannelMessagePacket(id, title, msg);
+        auto data = packet.Data();
+        auto len = packet.OutputDataSize();
+        mConnection->Send(data, len);
+        Request(Utils::Signal::CHANNEL_INFO_UPDATE);
     }
 
 }

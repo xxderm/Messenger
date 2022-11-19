@@ -47,6 +47,8 @@ namespace Application::Controller {
         void JoinChannel(uint32_t uid, std::string channelTitle);
 
         void UpdateChannelInfo(std::shared_ptr<Utils::InputMemory> input);
+
+        void OnChannelMessageSend(uint32_t id, std::string title, std::string msg);
     private:
         SDL_Renderer* mRenderer{};
         SDL_GLContext mContext{};

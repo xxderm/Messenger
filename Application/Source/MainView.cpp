@@ -193,89 +193,19 @@ namespace Application::View {
 
     void MainView::RenderChatPanel(SDL_Window *window, SDL_Renderer *renderer) {
 
-        std::vector<std::string> usrNames = {
-                "usr1",
-                "usr0",
-                "usr1",
-                "usr1",
-                "usr1",
-                "usr0",
-                "usr1",
-                "usr1",
-                "usr1",
-                "usr0",
-                "usr1",
-                "usr1",
-                "usr1",
-                "usr0",
-                "usr1",
-                "usr1",
-                "usr1",
-                "usr0",
-                "usr1",
-                "usr1"
-        };
-
-        std::vector<uint32_t> usrMessage = {
-                1,
-                0,
-                1,
-                1,
-                1,
-                0,
-                1,
-                1,
-                1,
-                0,
-                1,
-                1,
-                1,
-                0,
-                1,
-                1,
-                1,
-                0,
-                1,
-                1
-        };
-
-        std::vector<std::string> messages = {
-            "HelloFrom1 Test text",
-            "HelloFrom0 Test Text from 0 test text from 0",
-            "HelloFrom1 test test text test test from",
-            "HelloFrom1 test test small text test",
-            "HelloFrom1 Test text",
-            "HelloFrom0 Test Text from 0 test text from 0",
-            "HelloFrom1 test test text test test from",
-            "HelloFrom1 test test small text test",
-            "HelloFrom1 Test text",
-            "HelloFrom0 Test Text from 0 test text from 0",
-            "HelloFrom1 test test text test test from",
-            "HelloFrom1 test test small text test",
-            "HelloFrom1 Test text",
-            "HelloFrom0 Test Text from 0 test text from 0",
-            "HelloFrom1 test test text test test from",
-            "HelloFrom1 test test small text test",
-            "HelloFrom1 Test text",
-            "HelloFrom0 Test Text from 0 test text from 0",
-            "HelloFrom1 test test text test test from",
-            "HelloFrom1 test test small text test"
-        };
-
-
         ImGui::PushFont(mBaseFont);
 
         int winWidth{};
         int winHeight{};
         SDL_GetWindowSize(window, &winWidth, &winHeight);
-        ImVec2 chatPanelSize = { static_cast<float>(winWidth - 250), static_cast<float>(winHeight - 90) };
+        ImVec2 chatPanelSize = { static_cast<float>(winWidth - 250), static_cast<float>(winHeight - 130) };
         ImVec2 chatPanelPos = { 250, 60 };
         ImGui::SetNextWindowPos(chatPanelPos);
         ImGui::SetNextWindowSize(chatPanelSize);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.04, 0.047, 0.1, 1.0));
         ImGui::Begin("##ChatPanel",0 , ImGuiWindowFlags_NoDecoration |
                         ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNav);
-        if (messages.empty()) {
+        if (mMessages.empty() && mChannels.empty()) {
             ImGui::SetCursorPos(ImVec2((chatPanelSize.x / 2.) - 50, (chatPanelSize.y / 2) - 37.5));
             ImGui::Image((ImTextureID) mChatIconTexture, ImVec2(100, 75));
         }
@@ -291,35 +221,24 @@ namespace Application::View {
                 }
                 if (connected) {
                     if (ImGui::BeginTabItem(channel.Title.c_str())) {
+                        mCurrentChannelTitle = channel.Title;
                         if (ImGui::BeginTable("##ChatGrid", 2)) {
-                            for (int i = 0; i < messages.size(); ++i) {
+                            for (int i = 0; i < channel.UsrMessages.size(); ++i) {
                                 ImGui::TableNextRow();
                                 int column = 1;
-                                if (usrMessage[i] == *mUid.get())
+                                if (channel.UsrMessages[i].User.Id == *mUid.get())
                                     column = 0;
                                 ImGui::TableSetColumnIndex(column);
                                 ImGui::TableSetBgColor(ImGuiTableBgTarget_::ImGuiTableBgTarget_CellBg,
                                                        IM_COL32(38, 42, 103, 255));
-                                auto usrNameText = " " + usrNames[i] + ":";
+                                auto usrNameText = " " + channel.UsrMessages[i].User.Name + ":";
                                 ImGui::Text(usrNameText.c_str());
                                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
-                                ImGui::TextWrapped(messages[i].c_str());
+                                ImGui::TextWrapped(channel.UsrMessages[i].Content.c_str());
                                 ImGui::TableNextRow();
                                 ImGui::TableNextRow();
                             }
                             ImGui::EndTable();
-                            char buff[50];
-                            ImGui::SetCursorPosY(static_cast<float>(winHeight - 90) - 30);
-                            ImGui::PushItemWidth(static_cast<float>(winWidth - 250) - 50);
-                            ImGui::InputText("##ChatTextInput", buff, 50);
-                            ImGui::PopItemWidth();
-                            ImGui::SameLine();
-                            if (ImGui::ImageButton(
-                                    (ImTextureID)mSendMessageTexture, ImVec2(24, 24),
-                                    ImVec2(0,0), ImVec2(1, 1), 0
-                                    )) {
-                                // TODO:
-                            }
                         }
                         ImGui::EndTabItem();
                     }
@@ -330,6 +249,23 @@ namespace Application::View {
 
         ImGui::End();
         ImGui::PopStyleColor();
+
+        ImGui::SetNextWindowPos(ImVec2(250, static_cast<float>(winHeight - 70)));
+        ImGui::SetNextWindowSize(ImVec2(static_cast<float>(winWidth - 250), 40));
+        ImGui::Begin("##inputArea", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
+            ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoDecoration);
+        ImGui::PushItemWidth(winWidth - 300);
+        ImGui::InputText("##ChatTextInput", mMessageBuffer, 50);
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
+        if (ImGui::ImageButton(
+                (ImTextureID)mSendMessageTexture, ImVec2(24, 24),
+                ImVec2(0,0), ImVec2(1, 1), 0
+        )) {
+            // TODO: define message direction (channel, user)
+            mMessageToChannelCallBack(*mUid.get(), mCurrentChannelTitle, mMessageBuffer);
+        }
+        ImGui::End();
 
         ImGui::PopFont();
     }
@@ -512,6 +448,10 @@ namespace Application::View {
 
     void MainView::OnJoinChannel(std::function<void(uint32_t, std::string)> function) {
         mJoinChannelCallBack = function;
+    }
+
+    void MainView::OnSendMessageChannel(std::function<void(uint32_t, std::string, std::string)> fn) {
+        this->mMessageToChannelCallBack = fn;
     }
 
 }
