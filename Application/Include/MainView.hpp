@@ -10,6 +10,7 @@
 #include "Entities.hpp"
 #include <functional>
 #include <string>
+#include <fstream>
 
 namespace Application::View {
 
@@ -44,6 +45,8 @@ namespace Application::View {
         void SetUid(std::shared_ptr<uint32_t> uid);
     private:
         void RenderStatusBar(SDL_Window* window, SDL_Renderer* renderer);
+
+        void RenderAuthForm(SDL_Window* window, SDL_Renderer* renderer);
 
         void RenderLeftPanel(SDL_Window* window, SDL_Renderer* renderer);
 
@@ -80,8 +83,11 @@ namespace Application::View {
         std::function<void(std::string, uint32_t, bool access)> mChannelCreateCallBack;
         std::function<void(uint32_t, std::string)> mJoinChannelCallBack;
         std::function<void(uint32_t, std::string, std::string)> mMessageToChannelCallBack;
+        std::function<void(std::string)> mAuthCallBack;
         int mChannelPlaces = 0;
         char mChannelNameBuffer[10]{'\0'};
+        char mUserNameBuffer[10]{'\0'};
+        char mUserPassBuffer[10]{'\0'};
         char mMessageBuffer[50]{'\0'};
         std::string mCurrentChannelTitle{};
         const char* mItemChannelAccess[2] = { "открытый", "закрытый" };
