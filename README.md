@@ -78,4 +78,6 @@ void MainView::RenderAuthForm(SDL_Window *window, SDL_Renderer *renderer) {
         ImGui::End();
     }
 ```
+Формы:
 ![alt text](https://github.com/xxderm/Messenger/blob/lab3_auth/Resources/authformsignup.png)
+![alt text](https://github.com/xxderm/Messenger/blob/lab3_auth/Resources/authformsignin.png)
